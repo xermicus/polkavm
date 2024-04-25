@@ -1823,7 +1823,12 @@ fn convert_instruction(
             };
 
             let Some(src2) = cast_reg_non_zero(src2)? else {
-                emit(InstExt::Basic(BasicInst::LoadImmediate { dst, imm: 0 }));
+                emit(InstExt::Basic(BasicInst::AnyAny {
+                    kind: AnyAnyKind::Add,
+                    dst,
+                    src1: RegImm::Reg(src1),
+                    src2: RegImm::Imm(0),
+                }));
                 return Ok(());
             };
 
