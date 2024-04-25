@@ -273,6 +273,11 @@ pub enum Inst {
         dst: Reg,
         src: Reg,
     },
+    Andn {
+        dst: Reg,
+        src1: Reg,
+        src2: Reg,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
@@ -846,6 +851,9 @@ impl Inst {
             ),
             Inst::Rev8 { dst, src } => {
                 Some(0b0010011 | (0b101 << 12) | ((dst as u32) << 7) | ((src as u32) << 15) | (0b011010011000 << 20))
+            }
+            Inst::Andn { dst, src1, src2 } => {
+                Some(0b0110011 | (0b111 << 12) | ((dst as u32) << 7) | ((src1 as u32) << 15) | ((src2 as u32) << 20) | (0b0100000 << 25))
             }
         }
     }

@@ -1,18 +1,18 @@
 use polkavm_assembler::amd64::addr::*;
 use polkavm_assembler::amd64::inst::*;
+use polkavm_assembler::amd64::Reg::rsp;
 use polkavm_assembler::amd64::RegIndex as NativeReg;
 use polkavm_assembler::amd64::RegIndex::*;
-use polkavm_assembler::amd64::Reg::rsp;
-use polkavm_assembler::amd64::{Condition, LoadKind, RegSize, Size, MemOp};
+use polkavm_assembler::amd64::{Condition, LoadKind, MemOp, RegSize, Size};
 use polkavm_assembler::Label;
 
-use polkavm_common::program::{InstructionVisitor, Reg};
 use polkavm_common::abi::VM_CODE_ADDRESS_ALIGNMENT;
+use polkavm_common::program::{InstructionVisitor, Reg};
 use polkavm_common::zygote::VM_ADDR_VMCTX;
 
 use crate::api::VisitorWrapper;
-use crate::config::GasMeteringKind;
 use crate::compiler::{Compiler, SandboxKind};
+use crate::config::GasMeteringKind;
 use crate::utils::RegImm;
 
 const TMP_REG: NativeReg = rcx;
@@ -73,14 +73,14 @@ macro_rules! with_sandbox_kind {
                 #[allow(non_upper_case_globals)]
                 const $kind: SandboxKind = SandboxKind::Linux;
                 $body
-            },
+            }
             SandboxKind::Generic => {
                 #[allow(non_upper_case_globals)]
                 const $kind: SandboxKind = SandboxKind::Generic;
                 $body
             }
         }
-    }
+    };
 }
 
 macro_rules! load_store_operand {
@@ -97,7 +97,7 @@ macro_rules! load_store_operand {
                         let $op = abs(RegSize::R32, $offset as i32);
                         $body
                     }
-                },
+                }
                 SandboxKind::Generic => {
                     match ($base, $offset) {
                         // [address] = ..
@@ -105,25 +105,29 @@ macro_rules! load_store_operand {
                         (None, _) if $offset as i32 >= 0 => {
                             let $op = reg_indirect(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG + $offset as i32);
                             $body
-                        },
+                        }
 
                         // [address] = ..
                         (None, _) => {
                             $self.push(mov_imm(TMP_REG, imm32($offset)));
                             let $op = base_index(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG, TMP_REG);
                             $body
-                        },
+                        }
 
                         // [base] = ..
                         (Some($base), 0) => {
                             // NOTE: This assumes that `base` has its upper 32-bits clear.
                             let $op = base_index(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG, conv_reg($base));
                             $body
-                        },
+                        }
 
                         // [base + offset] = ..
                         (Some($base), _) => {
-                            $self.push(lea(RegSize::R32, TMP_REG, reg_indirect(RegSize::R32, conv_reg($base) + $offset as i32)));
+                            $self.push(lea(
+                                RegSize::R32,
+                                TMP_REG,
+                                reg_indirect(RegSize::R32, conv_reg($base) + $offset as i32),
+                            ));
                             let $op = base_index(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG, TMP_REG);
                             $body
                         }
@@ -131,7 +135,7 @@ macro_rules! load_store_operand {
                 }
             }
         })
-    }
+    };
 }
 
 enum Signedness {
@@ -170,13 +174,11 @@ impl<'a> Compiler<'a> {
         load_store_operand!(self, base, offset, |dst| {
             match src {
                 RegImm::Reg(src) => self.push(store(kind, dst, conv_reg(src))),
-                RegImm::Imm(value) => {
-                    match kind {
-                        Size::U8 => self.push(mov_imm(dst, imm8(value as u8))),
-                        Size::U16 => self.push(mov_imm(dst, imm16(value as u16))),
-                        Size::U32 => self.push(mov_imm(dst, imm32(value))),
-                        Size::U64 => unreachable!(),
-                    }
+                RegImm::Imm(value) => match kind {
+                    Size::U8 => self.push(mov_imm(dst, imm8(value as u8))),
+                    Size::U16 => self.push(mov_imm(dst, imm16(value as u16))),
+                    Size::U32 => self.push(mov_imm(dst, imm32(value))),
+                    Size::U64 => unreachable!(),
                 },
             }
         });
@@ -200,7 +202,7 @@ impl<'a> Compiler<'a> {
         match self.reg_size() {
             RegSize::R32 => {
                 self.push(mov_imm(conv_reg(reg), imm32(0xffffffff)));
-            },
+            }
             RegSize::R64 => {
                 self.clear_reg(reg);
                 self.push(not(Size::U64, conv_reg(reg)));
@@ -239,7 +241,7 @@ impl<'a> Compiler<'a> {
             match self.reg_size() {
                 RegSize::R32 => {
                     self.push(cmp((conv_reg(s1), imm32(s2))));
-                },
+                }
                 RegSize::R64 => {
                     self.push(cmp((conv_reg(s1), imm64(s2 as i32))));
                 }
@@ -282,7 +284,7 @@ impl<'a> Compiler<'a> {
                 if s1 != d {
                     self.mov(d, s1);
                 }
-            },
+            }
             RegImm::Imm(s1) => {
                 self.load_immediate(d, s1);
             }
@@ -315,15 +317,11 @@ impl<'a> Compiler<'a> {
     #[cfg_attr(not(debug_assertions), inline(always))]
     fn jump_to_label(&mut self, label: Label) {
         if let Some(offset) = self.asm.get_label_origin_offset(label) {
-            let offset = self.calculate_label_offset(
-                jmp_rel8(i8::MAX).len(),
-                jmp_rel32(i32::MAX).len(),
-                offset
-            );
+            let offset = self.calculate_label_offset(jmp_rel8(i8::MAX).len(), jmp_rel32(i32::MAX).len(), offset);
 
             match offset {
                 Ok(offset) => self.push(jmp_rel8(offset)),
-                Err(offset) => self.push(jmp_rel32(offset))
+                Err(offset) => self.push(jmp_rel32(offset)),
             }
         } else {
             self.push(jmp_label32(label));
@@ -339,15 +337,11 @@ impl<'a> Compiler<'a> {
 
         let label = self.get_or_forward_declare_label(target);
         if let Some(offset) = self.asm.get_label_origin_offset(label) {
-            let offset = self.calculate_label_offset(
-                jcc_rel8(condition, i8::MAX).len(),
-                jcc_rel32(condition, i32::MAX).len(),
-                offset
-            );
+            let offset = self.calculate_label_offset(jcc_rel8(condition, i8::MAX).len(), jcc_rel32(condition, i32::MAX).len(), offset);
 
             match offset {
                 Ok(offset) => self.push(jcc_rel8(condition, offset)),
-                Err(offset) => self.push(jcc_rel32(condition, offset))
+                Err(offset) => self.push(jcc_rel32(condition, offset)),
             }
         } else {
             self.push(jcc_label32(condition, label));
@@ -471,9 +465,7 @@ impl<'a> Compiler<'a> {
     #[cfg_attr(not(debug_assertions), inline(always))]
     fn vmctx_field(&self, offset: usize) -> MemOp {
         match self.sandbox_kind {
-            SandboxKind::Linux => {
-                reg_indirect(RegSize::R64, LINUX_SANDBOX_VMCTX_REG + offset as i32)
-            },
+            SandboxKind::Linux => reg_indirect(RegSize::R64, LINUX_SANDBOX_VMCTX_REG + offset as i32),
             SandboxKind::Generic => {
                 let offset = crate::sandbox::generic::GUEST_MEMORY_TO_VMCTX_OFFSET as i32 + offset as i32;
                 reg_indirect(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG + offset)
@@ -493,14 +485,22 @@ impl<'a> Compiler<'a> {
     fn save_registers_to_vmctx(&mut self) {
         let regs_base = self.load_vmctx_field_address(self.vmctx_regs_offset);
         for (nth, reg) in Reg::ALL.iter().copied().enumerate() {
-            self.push(store(Size::U32, reg_indirect(RegSize::R64, regs_base + nth as i32 * 4), conv_reg(reg)));
+            self.push(store(
+                Size::U32,
+                reg_indirect(RegSize::R64, regs_base + nth as i32 * 4),
+                conv_reg(reg),
+            ));
         }
     }
 
     fn restore_registers_from_vmctx(&mut self) {
         let regs_base = self.load_vmctx_field_address(self.vmctx_regs_offset);
         for (nth, reg) in Reg::ALL.iter().copied().enumerate() {
-            self.push(load(LoadKind::U32, conv_reg(reg), reg_indirect(RegSize::R64, regs_base + nth as i32 * 4)));
+            self.push(load(
+                LoadKind::U32,
+                conv_reg(reg),
+                reg_indirect(RegSize::R64, regs_base + nth as i32 * 4),
+            ));
         }
     }
 
@@ -549,7 +549,6 @@ impl<'a> Compiler<'a> {
         self.push(call(TMP_REG));
         self.restore_registers_from_vmctx();
         self.push(ret());
-
     }
 
     pub(crate) fn emit_trace_trampoline(&mut self) {
@@ -612,7 +611,11 @@ impl<'a> Compiler<'a> {
 
     #[cfg_attr(not(debug_assertions), inline(always))]
     fn get_return_address(&self) -> u32 {
-        let index = self.jump_table_index_by_basic_block.get(self.next_basic_block() as usize).copied().unwrap_or(0);
+        let index = self
+            .jump_table_index_by_basic_block
+            .get(self.next_basic_block() as usize)
+            .copied()
+            .unwrap_or(0);
         if index == 0 {
             panic!("internal error: couldn't fetch the jump table index for the return basic block");
         }
@@ -624,10 +627,14 @@ impl<'a> Compiler<'a> {
         let return_address = ra.map(|ra| (ra, self.get_return_address()));
         match self.sandbox_kind {
             SandboxKind::Linux => {
-                use polkavm_assembler::amd64::{SegReg, Scale};
+                use polkavm_assembler::amd64::{Scale, SegReg};
 
                 let target = if offset != 0 || ra == Some(base) {
-                    self.push(lea(RegSize::R32, TMP_REG, reg_indirect(RegSize::R32, conv_reg(base) + offset as i32)));
+                    self.push(lea(
+                        RegSize::R32,
+                        TMP_REG,
+                        reg_indirect(RegSize::R32, conv_reg(base) + offset as i32),
+                    ));
                     TMP_REG
                 } else {
                     conv_reg(base)
@@ -637,8 +644,9 @@ impl<'a> Compiler<'a> {
                     self.load_immediate(return_register, return_address);
                 }
 
-                self.asm.push(jmp(MemOp::IndexScaleOffset(Some(SegReg::gs), RegSize::R64, target, Scale::x8, 0)));
-            },
+                self.asm
+                    .push(jmp(MemOp::IndexScaleOffset(Some(SegReg::gs), RegSize::R64, target, Scale::x8, 0)));
+            }
             SandboxKind::Generic => {
                 // TODO: This also could be more efficient.
                 self.push(lea_rip_label(TMP_REG, self.jump_table_label));
@@ -728,6 +736,15 @@ impl<'a> InstructionVisitor for VisitorWrapper<'a, Compiler<'a>> {
     }
 
     #[inline(always)]
+    fn andn(&mut self, dst: Reg, src1: Reg, src2: Reg) -> Self::ReturnTy {
+        let dst = conv_reg(dst);
+        let src1 = conv_reg(src1);
+        let src2 = conv_reg(src2);
+
+        self.push(andn(RegSize::R32, dst, src1, src2))
+    }
+
+    #[inline(always)]
     fn ecalli(&mut self, imm: u32) -> Self::ReturnTy {
         let ecall_label = self.ecall_label;
         self.push(mov_imm(TMP_REG, imm32(imm)));
@@ -785,12 +802,12 @@ impl<'a> InstructionVisitor for VisitorWrapper<'a, Compiler<'a>> {
     }
 
     #[inline(always)]
-    fn shift_arithmetic_right_imm_alt(&mut self, d: Reg, s2: Reg, s1: u32) -> Self::ReturnTy  {
+    fn shift_arithmetic_right_imm_alt(&mut self, d: Reg, s2: Reg, s1: u32) -> Self::ReturnTy {
         self.shift(d, s1, s2, ShiftKind::ArithmeticRight);
     }
 
     #[inline(always)]
-    fn shift_logical_left_imm_alt(&mut self, d: Reg, s2: Reg, s1: u32) -> Self::ReturnTy  {
+    fn shift_logical_left_imm_alt(&mut self, d: Reg, s2: Reg, s1: u32) -> Self::ReturnTy {
         self.shift(d, s1, s2, ShiftKind::LogicalLeft);
     }
 

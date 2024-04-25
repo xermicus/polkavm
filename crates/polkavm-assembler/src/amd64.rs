@@ -1594,6 +1594,9 @@ pub mod inst {
             None,
             (fmt.write_fmt(core::format_args!("bswap {}", self.1.name_from(self.0)))),
 
+        // https://www.felixcloutier.com/x86/andn
+        andn(RegSize, Reg, Reg, Reg) => todo!(), None, (fmt.write_str("andn")),
+
         // https://www.felixcloutier.com/x86/setcc
         setcc(Condition, RegMem) =>
             {

@@ -824,6 +824,10 @@ impl<'a, 'b, const DEBUG: bool> InstructionVisitor for Visitor<'a, 'b, DEBUG> {
         Ok(())
     }
 
+    fn andn(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
+        self.set3(d, s1, s2, |s1, s2| s1 & !s2)
+    }
+
     fn ecalli(&mut self, imm: u32) -> Self::ReturnTy {
         if let Some(on_hostcall) = self.ctx.on_hostcall.as_mut() {
             let access = BackendAccess::Interpreted(self.inner.access());

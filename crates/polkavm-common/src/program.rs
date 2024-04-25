@@ -701,6 +701,8 @@ define_opcodes! {
 
         cmov_if_zero                             = 83,
         cmov_if_not_zero                         = 84,
+
+        andn                                     = 90,
     ]
 
     // Instructions with args: imm
@@ -867,6 +869,10 @@ impl<'a> InstructionVisitor for core::fmt::Formatter<'a> {
 
     fn and(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
         write!(self, "{d} = {s1} & {s2}")
+    }
+
+    fn andn(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
+        write!(self, "{d} = {s1} & ~{s2}")
     }
 
     fn or(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
