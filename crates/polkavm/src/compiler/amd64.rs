@@ -740,7 +740,7 @@ impl<'a> InstructionVisitor for VisitorWrapper<'a, Compiler<'a>> {
         let dst = conv_reg(dst);
         let src = conv_reg(src);
 
-        self.push(clz(RegSize::R32, dst));
+        self.push(clz(RegSize::R32, dst, src));
     }
 
     #[inline(always)]
