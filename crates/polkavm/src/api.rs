@@ -368,6 +368,13 @@ where
     }
 
     #[inline(always)]
+    fn clz(&mut self, d: Reg, s: Reg) -> Self::ReturnTy {
+        self.0.before_instruction();
+        self.0.clz(d, s);
+        Ok(())
+    }
+
+    #[inline(always)]
     fn andn(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
         self.0.before_instruction();
         self.0.andn(d, s1, s2);

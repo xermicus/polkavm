@@ -723,6 +723,7 @@ define_opcodes! {
         move_reg                                 = 82,
         sbrk                                     = 87,
         bswap                                    = 88,
+        clz                                      = 89,
     ]
 }
 
@@ -841,6 +842,10 @@ impl<'a> InstructionVisitor for core::fmt::Formatter<'a> {
 
     fn bswap(&mut self, d: Reg, s: Reg) -> Self::ReturnTy {
         write!(self, "{d} = bswap {s}")
+    }
+
+    fn clz(&mut self, d: Reg, s: Reg) -> Self::ReturnTy {
+        write!(self, "{d} = clz {s}")
     }
 
     fn set_less_than_unsigned(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {

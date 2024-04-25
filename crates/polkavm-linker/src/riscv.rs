@@ -273,6 +273,10 @@ pub enum Inst {
         dst: Reg,
         src: Reg,
     },
+    Clz {
+        dst: Reg,
+        src: Reg,
+    },
     Andn {
         dst: Reg,
         src1: Reg,
@@ -512,6 +516,10 @@ impl Inst {
                 offset: sign_ext(bits(0, 4, op, 7) | bits(5, 11, op, 25), 12),
             }),
             0b0010011 => match (op >> 12) & 0b111 {
+                0b001 if op >> 20 == 0b011000000000 => Some(Inst::Clz {
+                    dst: Reg::decode(op >> 7),
+                    src: Reg::decode(op >> 15),
+                }),
                 0b001 => {
                     if op & 0xfe000000 != 0 {
                         return None;
@@ -564,6 +572,7 @@ impl Inst {
                     0b0100000_00000_00000_101_00000_0000000 => RegRegKind::ShiftArithmeticRight,
                     0b0000000_00000_00000_110_00000_0000000 => RegRegKind::Or,
                     0b0000000_00000_00000_111_00000_0000000 => RegRegKind::And,
+                    0b0100000_00000_00000_111_00000_0000000 => return Some(Inst::Andn { dst, src1, src2 }),
 
                     0b0000001_00000_00000_000_00000_0000000 => RegRegKind::Mul,
                     0b0000001_00000_00000_001_00000_0000000 => RegRegKind::MulUpperSignedSigned,
@@ -852,6 +861,7 @@ impl Inst {
             Inst::Rev8 { dst, src } => {
                 Some(0b0010011 | (0b101 << 12) | ((dst as u32) << 7) | ((src as u32) << 15) | (0b011010011000 << 20))
             }
+            Inst::Clz { dst, src } => Some(0b0010011 | (0b001 << 12) | ((dst as u32) << 7) | ((src as u32) << 15) | (0b011000000000 << 20)),
             Inst::Andn { dst, src1, src2 } => {
                 Some(0b0110011 | (0b111 << 12) | ((dst as u32) << 7) | ((src1 as u32) << 15) | ((src2 as u32) << 20) | (0b0100000 << 25))
             }

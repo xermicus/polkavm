@@ -538,6 +538,10 @@ enum BasicInst<T> {
         dst: Reg,
         src: Reg,
     },
+    Clz {
+        dst: Reg,
+        src: Reg,
+    },
     Andn {
         dst: Reg,
         src1: Reg,
@@ -599,6 +603,7 @@ impl<T> BasicInst<T> {
             BasicInst::RegReg { src1, src2, .. } => RegMask::from(src1) | RegMask::from(src2),
             BasicInst::AnyAny { src1, src2, .. } => RegMask::from(src1) | RegMask::from(src2),
             BasicInst::Rev8 { src, .. } => RegMask::from(src),
+            BasicInst::Clz { src, .. } => RegMask::from(src),
             BasicInst::Andn { src1, src2, .. } => RegMask::from(src1) | RegMask::from(src2),
             BasicInst::Cmov { dst, src, cond, .. } => RegMask::from(dst) | RegMask::from(src) | RegMask::from(cond),
             BasicInst::Ecalli { nth_import } => imports[nth_import].src_mask(),
@@ -617,6 +622,7 @@ impl<T> BasicInst<T> {
             | BasicInst::RegReg { dst, .. }
             | BasicInst::Cmov { dst, .. }
             | BasicInst::Rev8 { dst, .. }
+            | BasicInst::Clz { dst, .. }
             | BasicInst::Andn { dst, .. }
             | BasicInst::AnyAny { dst, .. } => RegMask::from(dst),
             BasicInst::Ecalli { nth_import } => imports[nth_import].dst_mask(),
@@ -635,6 +641,7 @@ impl<T> BasicInst<T> {
             | BasicInst::RegReg { .. }
             | BasicInst::Cmov { .. }
             | BasicInst::Rev8 { .. }
+            | BasicInst::Clz { .. }
             | BasicInst::Andn { .. }
             | BasicInst::AnyAny { .. } => false,
         }
@@ -684,6 +691,10 @@ impl<T> BasicInst<T> {
                 dst: map(dst, OpKind::Write),
             }),
             BasicInst::Rev8 { dst, src } => Some(BasicInst::Rev8 {
+                src: map(src, OpKind::Read),
+                dst: map(dst, OpKind::Write),
+            }),
+            BasicInst::Clz { dst, src } => Some(BasicInst::Clz {
                 src: map(src, OpKind::Read),
                 dst: map(dst, OpKind::Write),
             }),
@@ -770,6 +781,7 @@ impl<T> BasicInst<T> {
             BasicInst::RegReg { kind, dst, src1, src2 } => BasicInst::RegReg { kind, dst, src1, src2 },
             BasicInst::AnyAny { kind, dst, src1, src2 } => BasicInst::AnyAny { kind, dst, src1, src2 },
             BasicInst::Rev8 { dst, src } => BasicInst::Rev8 { dst, src },
+            BasicInst::Clz { dst, src } => BasicInst::Clz { dst, src },
             BasicInst::Andn { dst, src1, src2 } => BasicInst::Andn { dst, src1, src2 },
             BasicInst::Cmov { kind, dst, src, cond } => BasicInst::Cmov { kind, dst, src, cond },
             BasicInst::Ecalli { nth_import } => BasicInst::Ecalli { nth_import },
@@ -792,6 +804,7 @@ impl<T> BasicInst<T> {
             | BasicInst::RegReg { .. }
             | BasicInst::AnyAny { .. }
             | BasicInst::Rev8 { .. }
+            | BasicInst::Clz { .. }
             | BasicInst::Andn { .. }
             | BasicInst::Cmov { .. }
             | BasicInst::Sbrk { .. }
@@ -1780,6 +1793,21 @@ fn convert_instruction(
             };
 
             emit(InstExt::Basic(BasicInst::Rev8 { dst, src }));
+
+            Ok(())
+        }
+        Inst::Clz { dst, src } => {
+            let Some(dst) = cast_reg_non_zero(dst)? else {
+                emit(InstExt::Basic(BasicInst::Nop));
+                return Ok(());
+            };
+
+            let Some(src) = cast_reg_non_zero(src)? else {
+                emit(InstExt::Basic(BasicInst::LoadImmediate { dst, imm: 0 }));
+                return Ok(());
+            };
+
+            emit(InstExt::Basic(BasicInst::Clz { dst, src }));
 
             Ok(())
         }
@@ -5444,6 +5472,7 @@ fn emit_code(
                     }
                 }
                 BasicInst::Rev8 { dst, src } => Instruction::bswap(conv_reg(dst), conv_reg(src)),
+                BasicInst::Clz { dst, src } => Instruction::clz(conv_reg(dst), conv_reg(src)),
                 BasicInst::Andn { dst, src1, src2 } => Instruction::andn(conv_reg(dst), conv_reg(src1), conv_reg(src2)),
                 BasicInst::Cmov { kind, dst, src, cond } => match src {
                     RegImm::Reg(src) => {

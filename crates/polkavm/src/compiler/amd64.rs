@@ -736,6 +736,14 @@ impl<'a> InstructionVisitor for VisitorWrapper<'a, Compiler<'a>> {
     }
 
     #[inline(always)]
+    fn clz(&mut self, dst: Reg, src: Reg) -> Self::ReturnTy {
+        let dst = conv_reg(dst);
+        let src = conv_reg(src);
+
+        self.push(clz(RegSize::R32, dst));
+    }
+
+    #[inline(always)]
     fn andn(&mut self, dst: Reg, src1: Reg, src2: Reg) -> Self::ReturnTy {
         let dst = conv_reg(dst);
         let src1 = conv_reg(src1);

@@ -824,6 +824,13 @@ impl<'a, 'b, const DEBUG: bool> InstructionVisitor for Visitor<'a, 'b, DEBUG> {
         Ok(())
     }
 
+    fn clz(&mut self, dst: Reg, src: Reg) -> Self::ReturnTy {
+        let value = self.get(src).leading_zeros();
+        self.set(dst, value)?;
+        self.inner.nth_instruction += 1;
+        Ok(())
+    }
+
     fn andn(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
         self.set3(d, s1, s2, |s1, s2| s1 & !s2)
     }
