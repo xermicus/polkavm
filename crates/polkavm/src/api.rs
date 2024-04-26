@@ -382,6 +382,13 @@ where
     }
 
     #[inline(always)]
+    fn orn(&mut self, d: Reg, s1: Reg, s2: Reg) -> Self::ReturnTy {
+        self.0.before_instruction();
+        self.0.orn(d, s1, s2);
+        Ok(())
+    }
+
+    #[inline(always)]
     fn ecalli(&mut self, imm: u32) -> Self::ReturnTy {
         if self.imports.get(imm as usize).is_none() {
             #[cold]

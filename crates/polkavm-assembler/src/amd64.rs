@@ -1603,6 +1603,8 @@ pub mod inst {
         // https://www.felixcloutier.com/x86/andn
         andn(RegSize, Reg, Reg, Reg) => todo!(), None, (fmt.write_str("andn")),
 
+        orn(RegSize, Reg, Reg, Reg) => todo!(), None, (fmt.write_str("orn")),
+
         // https://www.felixcloutier.com/x86/setcc
         setcc(Condition, RegMem) =>
             {

@@ -753,6 +753,15 @@ impl<'a> InstructionVisitor for VisitorWrapper<'a, Compiler<'a>> {
     }
 
     #[inline(always)]
+    fn orn(&mut self, dst: Reg, src1: Reg, src2: Reg) -> Self::ReturnTy {
+        let dst = conv_reg(dst);
+        let src1 = conv_reg(src1);
+        let src2 = conv_reg(src2);
+
+        self.push(orn(RegSize::R32, dst, src1, src2))
+    }
+
+    #[inline(always)]
     fn ecalli(&mut self, imm: u32) -> Self::ReturnTy {
         let ecall_label = self.ecall_label;
         self.push(mov_imm(TMP_REG, imm32(imm)));

@@ -282,6 +282,11 @@ pub enum Inst {
         src1: Reg,
         src2: Reg,
     },
+    Orn {
+        dst: Reg,
+        src1: Reg,
+        src2: Reg,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
@@ -573,6 +578,7 @@ impl Inst {
                     0b0000000_00000_00000_110_00000_0000000 => RegRegKind::Or,
                     0b0000000_00000_00000_111_00000_0000000 => RegRegKind::And,
                     0b0100000_00000_00000_111_00000_0000000 => return Some(Inst::Andn { dst, src1, src2 }),
+                    0b0100000_00000_00000_110_00000_0000000 => return Some(Inst::Orn { dst, src1, src2 }),
 
                     0b0000001_00000_00000_000_00000_0000000 => RegRegKind::Mul,
                     0b0000001_00000_00000_001_00000_0000000 => RegRegKind::MulUpperSignedSigned,
@@ -864,6 +870,9 @@ impl Inst {
             Inst::Clz { dst, src } => Some(0b0010011 | (0b001 << 12) | ((dst as u32) << 7) | ((src as u32) << 15) | (0b011000000000 << 20)),
             Inst::Andn { dst, src1, src2 } => {
                 Some(0b0110011 | (0b111 << 12) | ((dst as u32) << 7) | ((src1 as u32) << 15) | ((src2 as u32) << 20) | (0b0100000 << 25))
+            }
+            Inst::Orn { dst, src1, src2 } => {
+                Some(0b0110011 | (0b110 << 12) | ((dst as u32) << 7) | ((src1 as u32) << 15) | ((src2 as u32) << 20) | (0b0100000 << 25))
             }
         }
     }
