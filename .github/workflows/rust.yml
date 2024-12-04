@@ -102,6 +102,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install cargo fuzz
-      run: cargo install cargo-fuzz
+      run: |
+        rustup toolchain install 1.83.0
+        rustup run 1.83.0 cargo install cargo-fuzz
     - name: Fuzz
       run: ./ci/jobs/fuzz.sh
