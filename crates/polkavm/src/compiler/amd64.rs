@@ -15,12 +15,6 @@ use crate::config::GasMeteringKind;
 use crate::sandbox::Sandbox;
 use crate::utils::RegImm;
 
-/// A temporary register which can be freely used.
-const TMP_REG: NativeReg = rcx;
-
-/// A temporary register which must be saved/restored.
-const AUX_TMP_REG: NativeReg = r15;
-
 /// The register used for the embedded sandbox to hold the base address of the guest's linear memory.
 const GENERIC_SANDBOX_MEMORY_REG: NativeReg = AUX_TMP_REG;
 
@@ -28,6 +22,7 @@ const GENERIC_SANDBOX_MEMORY_REG: NativeReg = AUX_TMP_REG;
 const LINUX_SANDBOX_VMCTX_REG: NativeReg = AUX_TMP_REG;
 
 use polkavm_common::regmap::to_native_reg as conv_reg_const;
+use polkavm_common::regmap::{AUX_TMP_REG, TMP_REG};
 
 polkavm_common::static_assert!(polkavm_common::regmap::to_guest_reg(TMP_REG).is_none());
 polkavm_common::static_assert!(polkavm_common::regmap::to_guest_reg(AUX_TMP_REG).is_none());
