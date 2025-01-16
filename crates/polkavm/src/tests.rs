@@ -2618,6 +2618,48 @@ fn gas_metering_with_implicit_trap(config: Config) {
     assert_eq!(instance.gas(), 8);
 }
 
+fn trapping_preserves_all_registers_normal_trap(config: Config) {
+    let _ = env_logger::try_init();
+
+    let mut builder = ProgramBlobBuilder::new();
+    builder.add_export_by_basic_block(0, b"main");
+    builder.set_code(&[asm::trap()], &[]);
+
+    let blob = ProgramBlob::parse(builder.into_vec().into()).unwrap();
+    let engine = Engine::new(&config).unwrap();
+    let module = Module::from_blob(&engine, &ModuleConfig::default(), blob).unwrap();
+    let mut instance = module.instantiate().unwrap();
+    instance.set_next_program_counter(ProgramCounter(0));
+    for (index, reg) in Reg::ALL.into_iter().enumerate() {
+        instance.set_reg(reg, index as u64 + 0x100);
+    }
+    assert_eq!(instance.run().unwrap(), InterruptKind::Trap);
+    for (index, reg) in Reg::ALL.into_iter().enumerate() {
+        assert_eq!(instance.reg(reg), index as u64 + 0x100);
+    }
+}
+
+fn trapping_preserves_all_registers_segfault(config: Config) {
+    let _ = env_logger::try_init();
+
+    let mut builder = ProgramBlobBuilder::new();
+    builder.add_export_by_basic_block(0, b"main");
+    builder.set_code(&[asm::store_imm_u32(0, 0x12345678), asm::ret()], &[]);
+
+    let blob = ProgramBlob::parse(builder.into_vec().into()).unwrap();
+    let engine = Engine::new(&config).unwrap();
+    let module = Module::from_blob(&engine, &ModuleConfig::default(), blob).unwrap();
+    let mut instance = module.instantiate().unwrap();
+    instance.set_next_program_counter(ProgramCounter(0));
+    for (index, reg) in Reg::ALL.into_iter().enumerate() {
+        instance.set_reg(reg, index as u64 + 0x100);
+    }
+    assert_eq!(instance.run().unwrap(), InterruptKind::Trap);
+    for (index, reg) in Reg::ALL.into_iter().enumerate() {
+        assert_eq!(instance.reg(reg), index as u64 + 0x100, "mismatch for register {reg}");
+    }
+}
+
 fn test_basic_debug_info(raw_blob: &'static [u8]) {
     let _ = env_logger::try_init();
     let program = get_blob(raw_blob);
@@ -2861,6 +2903,9 @@ run_tests! {
     consume_gas_in_host_function_async
     gas_metering_with_more_than_one_basic_block
     gas_metering_with_implicit_trap
+
+    trapping_preserves_all_registers_normal_trap
+    trapping_preserves_all_registers_segfault
 
     spawn_stress_test
     module_cache
