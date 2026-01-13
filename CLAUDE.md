@@ -4,14 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PolkaVM is a general-purpose RISC-V based virtual machine targeting RV32EM. It provides secure sandboxed execution with both an interpreter and a JIT compiler backend.
+PolkaVM is a general-purpose RISC-V 64bit based virtual machine. It provides secure sandboxed execution with both an interpreter and a JIT compiler backend.
 
 ## Build Commands
 
 ```bash
-# Build all workspace crates
-cargo build
-
 # Build with release optimizations
 cargo build --release
 
@@ -47,8 +44,6 @@ cd guest-programs
 
 # Build guest programs (uses custom RISC-V target)
 cargo build --release
-
-# The custom target is at: crates/polkavm-linker/targets/legacy/riscv32emac-unknown-none-polkavm.json
 ```
 
 Guest programs require nightly Rust (`nightly-2025-05-10`) with `rust-src` component for `-Z build-std`.
@@ -62,7 +57,6 @@ Guest programs require nightly Rust (`nightly-2025-05-10`) with `rust-src` compo
   - `compiler.rs`: JIT compiler (x86_64 Linux/macOS/FreeBSD)
   - `sandbox/`: Process isolation for compiled code
   - `api.rs`: Public API types
-  - `linker.rs`: Runtime linking of host functions
 
 - **polkavm-common**: Shared types and utilities
   - `program.rs`: Program blob format, instruction definitions, parsing
@@ -71,7 +65,6 @@ Guest programs require nightly Rust (`nightly-2025-05-10`) with `rust-src` compo
 
 - **polkavm-linker**: Offline linker that transforms ELF to PolkaVM format
   - Reads RISC-V ELF files from guest compilation
-  - Performs register allocation via regalloc2
   - Outputs `.polkavm` program blobs
 
 - **polkavm-zygote**: Linux-only process template for sandboxed execution (separate workspace)
@@ -91,13 +84,6 @@ The VM supports two backends controlled via `Config::set_backend()` or `POLKAVM_
 - `interpreter`: Cross-platform, always available
 - `compiler`: JIT to native code, requires x86_64 + (Linux | macOS with `generic-sandbox` feature | FreeBSD with `generic-sandbox` feature)
 
-### Environment Variables
-
-- `POLKAVM_BACKEND`: `auto`, `compiler`, `interpreter`
-- `POLKAVM_SANDBOX`: `auto`, `linux`, `generic`
-- `POLKAVM_ALLOW_EXPERIMENTAL`: Enable experimental features
-- `POLKAVM_TRACE_EXECUTION`: Enable execution tracing (for debugging)
-
 ## Testing
 
 ```bash
@@ -111,11 +97,6 @@ POLKAVM_TRACE_EXECUTION=1 POLKAVM_ALLOW_INSECURE=1 cargo run -p hello-world-host
 cd fuzz
 cargo fuzz run fuzz_polkavm -- -runs=10000
 ```
-
-## Rust Version
-
-- Main workspace: Rust 1.86.0 (stable)
-- Guest programs: nightly-2025-05-10
 
 ## Key Types
 
